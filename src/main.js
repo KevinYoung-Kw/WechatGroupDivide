@@ -331,9 +331,11 @@ const createSlices = async () => {
       
       // 启用图片的长按保存功能（特别是在微信浏览器中）
       resultImg.setAttribute('data-downloadable', 'true');
-      // 禁用浏览器默认的上下文菜单
+      resultImg.setAttribute('data-long-press-save', 'true');
+      // 允许右键和长按操作
       resultImg.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
+        // 不阻止默认行为，允许长按/右键菜单
+        return true;
       });
       
       // 针对3人和5人的特殊处理，根据设备类型和切片位置设置合适的objectFit
@@ -366,12 +368,13 @@ const createSlices = async () => {
         resultImg.style.objectFit = 'cover';
       }
       
-      const overlay = document.createElement('div');
-      overlay.className = 'overlay';
-      overlay.innerHTML = '<span>长按保存</span>';
+      // 移除遮罩层，让图片可以直接长按保存
+      // const overlay = document.createElement('div');
+      // overlay.className = 'overlay';
+      // overlay.innerHTML = '<span>长按保存</span>';
       
       resultElement.appendChild(resultImg);
-      resultElement.appendChild(overlay);
+      // resultElement.appendChild(overlay);
       
       // 根据不同人数布局添加到不同的容器中
       switch (parseInt(members)) {
@@ -432,6 +435,13 @@ const createSlices = async () => {
       
       // 添加点击下载功能
       resultElement.addEventListener('click', () => {
+        // 在移动设备上，点击应该不做任何操作，让用户可以长按保存
+        if (isMobile) {
+          showMessage('长按图片可直接保存到相册', 'info', 2000);
+          return;
+        }
+        
+        // 在桌面设备上才触发下载
         const a = document.createElement('a');
         a.href = dataUrl;
         a.download = `微信群聊头像_${members}人_${i + 1}.jpg`;
@@ -656,10 +666,13 @@ document.addEventListener('keydown', (e) => {
 
 // 处理图片长按保存
 document.addEventListener('contextmenu', function(e) {
+  // 如果点击的是切片图片，则允许默认行为（长按保存）
   if (e.target.tagName === 'IMG' && e.target.closest('#resultImages')) {
-    // 不阻止默认行为，允许长按保存图片
-    // 特别是在微信浏览器中
+    // 允许默认行为，不阻止
     return true;
+  } else {
+    // 对于其他元素，阻止默认的右键菜单
+    e.preventDefault();
   }
 }, false);
 
@@ -677,13 +690,31 @@ window.addEventListener('load', function() {
   // 加载默认图片
   loadDefaultImages();
   
-  // 如果是移动设备，添加轻触提示
-  if (isMobile) {
-    const touchInfo = document.createElement('p');
-    touchInfo.className = 'results-hint';
-    touchInfo.textContent = '提示：生成后长按图片可保存';
-    elements.divideBtn.parentNode.appendChild(touchInfo);
+  // 添加提示信息
+  const touchInfo = document.createElement('p');
+  touchInfo.className = 'results-hint';
+  touchInfo.textContent = '提示：点击复制，长按保存图片到相册';
+  
+  // 如果结果容器存在，添加提示
+  if (elements.resultContainer) {
+    const existingHint = elements.resultContainer.querySelector('.results-hint');
+    if (existingHint) {
+      existingHint.textContent = touchInfo.textContent;
+    } else {
+      elements.divideBtn.parentNode.appendChild(touchInfo);
+    }
   }
+  
+  // 禁用长按菜单的CSS
+  const style = document.createElement('style');
+  style.innerHTML = `
+    .result-image img {
+      -webkit-touch-callout: default !important;
+      -webkit-user-select: auto !important;
+      user-select: auto !important;
+    }
+  `;
+  document.head.appendChild(style);
 });
 
 // 监听窗口大小变化，以便在需要时调整布局
