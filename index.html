@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="微信群聊头像切片工具，帮助您将图片分割成适合微信群聊的头像片段。">
+  <meta name="theme-color" content="#7B9E89">
+  <title>微信群聊头像切片工具</title>
+  <link rel="icon" href="./favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="./src/style.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap">
+</head>
+<body>
+  <div id="app" class="page-container">
+    <header class="app-header">
+      <h1 class="app-title">微信群聊头像切片工具</h1>
+      <p class="app-subtitle">别再用什么Excel、图片切割了......咱们一键切割好吗？</p>
+      <p class="app-credit">切割头像灵感💡来源：<a href="http://xhslink.com/a/jZhgJCyQrgn8" target="_blank" rel="noopener noreferrer">小红书@小兴安岭大头榛蘑</a></p>
+    </header>
+    
+    <main class="main-content">
+      <div class="card">
+        <!-- 人数选择 -->
+        <div class="form-group">
+          <label for="members" class="form-label">选择群聊人数</label>
+          <select id="members" class="form-input">
+            <option value="3">3人</option>
+            <option value="4">4人</option>
+            <option value="5">5人</option>
+            <option value="6">6人</option>
+            <option value="7">7人</option>
+            <option value="8">8人</option>
+            <option value="9">9人</option>
+          </select>
+        </div>
+        
+        <!-- 图片上传区域 -->
+        <div class="form-group">
+          <label class="form-label">选择图片</label>
+          <div class="upload-btn-wrapper">
+            <div class="upload-btn">
+              <span>上传自己的图片</span>
+            </div>
+            <input type="file" id="imageUpload" accept="image/*">
+          </div>
+          
+          <!-- 默认图片抽屉 -->
+          <div class="default-images-drawer">
+            <div class="drawer-header" id="drawerToggle">
+              <span class="drawer-title">选择默认图片</span>
+              <svg class="drawer-icon" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="drawer-content" id="drawerContent">
+              <div id="defaultImages" class="default-images-grid">
+                <!-- 默认图片将动态加载 -->
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 预览区域 -->
+        <div class="preview-container">
+          <label class="form-label">预览</label>
+          <div class="preview-area">
+            <p id="previewPlaceholder" class="preview-placeholder">请上传或选择图片</p>
+            <img id="previewImage" class="preview-image hidden" alt="预览图">
+          </div>
+        </div>
+        
+        <!-- 切片按钮 -->
+        <button id="divideBtn" class="generate-btn">生成切片</button>
+      </div>
+      
+      <!-- 结果展示区域 -->
+      <div id="resultContainer" class="results-container hidden">
+        <h2 class="results-title">切片结果</h2>
+        <div id="resultImages" class="results-grid">
+          <!-- 切片结果将动态加载 -->
+        </div>
+        
+        <p class="results-hint">长按图片可保存到相册</p>
+        
+        <div class="action-buttons">
+          <button id="downloadAll" class="download-all-btn">一键打包下载所有切片</button>
+          <button id="resetBtn" class="reset-btn">重新开始</button>
+        </div>
+      </div>
+    </main>
+    
+    <footer class="app-footer">
+      <p>© 2025 微信群聊头像切片工具 | 图片不会上传到服务器，所有处理均在本地完成</p>
+      <div class="footer-links">
+        <button id="donateBtn" class="footer-btn">请作者喝杯咖啡</button>
+        <button id="communityBtn" class="footer-btn">加入社群</button>
+        <a href="https://www.xiaohongshu.com/user/profile/67d07e13000000000e013738" target="_blank" rel="noopener noreferrer" class="footer-btn">Soulteam官方账号</a>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- 弹窗模板 -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn">&times;</span>
+      <h3 id="modalTitle" class="modal-title"></h3>
+      <div id="modalBody" class="modal-body">
+        <img id="modalImage" class="modal-image" src="" alt="">
+      </div>
+    </div>
+  </div>
+  
+  <!-- 主脚本 -->
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html> 
