@@ -15,8 +15,8 @@
   <div id="app" class="page-container">
     <header class="app-header">
       <h1 class="app-title">微信群聊头像切片工具</h1>
-      <p class="app-subtitle">别再用什么Excel、图片切割了......咱们一键切割好吗？</p>
-      <p class="app-credit">切割头像灵感💡来源：<a href="http://xhslink.com/a/jZhgJCyQrgn8" target="_blank" rel="noopener noreferrer">小红书@小兴安岭大头榛蘑</a></p>
+      <p class="app-subtitle">一键切割，怎么切怎么有面</p>
+      <p class="app-credit">切割头像灵感 & 教程💡来源：<a href="https://www.xiaohongshu.com/discovery/item/67d16487000000000900ffe2?source=webshare&xhsshare=pc_web&xsec_token=AB5LXTGaHSLfxYtuqDamynJLJiL5NZWIzpl6dyQYpqFIw=&xsec_source=pc_share" target="_blank" rel="noopener noreferrer">小红书@小鱼</a></p>
     </header>
     
     <main class="main-content">
@@ -66,7 +66,18 @@
           <label class="form-label">预览</label>
           <div class="preview-area">
             <p id="previewPlaceholder" class="preview-placeholder">请上传或选择图片</p>
-            <img id="previewImage" class="preview-image hidden" alt="预览图">
+            <div id="previewImageContainer" class="preview-image-container hidden">
+              <img id="previewImage" class="preview-image" alt="预览图">
+              <div id="cropperContainer" class="cropper-container hidden">
+                <div id="cropperBox" class="cropper-box"></div>
+                <div id="cropperOverlay" class="cropper-overlay"></div>
+              </div>
+            </div>
+          </div>
+          <div id="cropperControls" class="cropper-controls hidden">
+            <label class="cropper-hint">拖动选择正方形区域</label>
+            <button id="confirmCrop" class="confirm-crop-btn">确认选择</button>
+            <button id="resetCrop" class="reset-crop-btn">重置选择</button>
           </div>
         </div>
         

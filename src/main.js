@@ -9,7 +9,14 @@ const elements = {
   drawerToggle: document.getElementById('drawerToggle'),
   drawerContent: document.getElementById('drawerContent'),
   previewPlaceholder: document.getElementById('previewPlaceholder'),
+  previewImageContainer: document.getElementById('previewImageContainer'),
   previewImage: document.getElementById('previewImage'),
+  cropperContainer: document.getElementById('cropperContainer'),
+  cropperBox: document.getElementById('cropperBox'),
+  cropperOverlay: document.getElementById('cropperOverlay'),
+  cropperControls: document.getElementById('cropperControls'),
+  confirmCrop: document.getElementById('confirmCrop'),
+  resetCrop: document.getElementById('resetCrop'),
   divideBtn: document.getElementById('divideBtn'),
   resultContainer: document.getElementById('resultContainer'),
   resultImages: document.getElementById('resultImages'),
@@ -26,7 +33,17 @@ const elements = {
 // 状态
 const state = {
   selectedImage: null,
-  croppedImages: []
+  croppedImages: [],
+  cropperInitialized: false,
+  cropperActive: false,
+  cropperData: {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    initialX: 0,
+    initialY: 0
+  }
 };
 
 // 设备检测
@@ -72,13 +89,11 @@ function loadDefaultImages() {
       // 添加选中状态
       imgContainer.classList.add('selected');
       
-      // 更新预览
-      elements.previewPlaceholder.classList.add('hidden');
-      elements.previewImage.classList.remove('hidden');
-      elements.previewImage.src = imgSrc;
-      
       // 更新状态
       state.selectedImage = imgSrc;
+      
+      // 初始化裁剪工具
+      initCropper(imgSrc);
     });
   });
 }
@@ -163,6 +178,12 @@ const calculateLayout = (members) => {
 const createSlices = async () => {
   if (!state.selectedImage) {
     showMessage('请先选择或上传图片', 'error');
+    return;
+  }
+  
+  // 如果当前正在裁剪中但未确认，提示用户确认裁剪
+  if (state.cropperActive) {
+    showMessage('请先确认您的裁剪区域', 'warning');
     return;
   }
   
@@ -498,10 +519,14 @@ function resetTool() {
   // 清空已有数据
   state.selectedImage = null;
   state.croppedImages = [];
+  state.cropperActive = false;
   
   // 重置UI
-  elements.previewImage.classList.add('hidden');
   elements.previewPlaceholder.classList.remove('hidden');
+  elements.previewImageContainer.classList.add('hidden');
+  elements.previewImage.classList.add('hidden');
+  elements.cropperContainer.classList.add('hidden');
+  elements.cropperControls.classList.add('hidden');
   elements.resultContainer.classList.add('hidden');
   elements.resultImages.innerHTML = '';
   
@@ -517,6 +542,335 @@ function resetTool() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// 检查图片是否为正方形
+function isSquareImage(img) {
+  // 允许1像素的误差，因为有些图片在压缩时可能会有细微差异
+  return Math.abs(img.width - img.height) <= 1;
+}
+
+// 初始化正方形选择工具
+function initCropper(imgSrc) {
+  const img = new Image();
+  img.src = imgSrc;
+  
+  img.onload = () => {
+    // 只有非正方形图片才需要裁剪
+    if (isSquareImage(img)) {
+      // 如果是正方形，直接显示预览
+      showImagePreview(imgSrc);
+      return;
+    }
+    
+    // 显示预览图片
+    elements.previewPlaceholder.classList.add('hidden');
+    elements.previewImageContainer.classList.remove('hidden');
+    elements.previewImage.classList.remove('hidden');
+    elements.previewImage.src = imgSrc;
+    
+    // 显示裁剪控件
+    elements.cropperContainer.classList.remove('hidden');
+    elements.cropperControls.classList.remove('hidden');
+    
+    // 计算初始裁剪框位置
+    const imgWidth = elements.previewImage.clientWidth;
+    const imgHeight = elements.previewImage.clientHeight;
+    const size = Math.min(imgWidth, imgHeight) * 0.8; // 初始框大小为较小边的80%
+    
+    // 计算居中位置
+    const x = (imgWidth - size) / 2;
+    const y = (imgHeight - size) / 2;
+    
+    // 设置裁剪框样式
+    elements.cropperBox.style.width = `${size}px`;
+    elements.cropperBox.style.height = `${size}px`;
+    elements.cropperBox.style.left = `${x}px`;
+    elements.cropperBox.style.top = `${y}px`;
+    
+    // 保存裁剪框数据
+    state.cropperData = {
+      x,
+      y,
+      width: size,
+      height: size,
+      initialX: 0,
+      initialY: 0
+    };
+    
+    state.cropperActive = true;
+    state.cropperInitialized = true;
+    
+    // 如果之前没有添加过事件监听器，添加拖动事件
+    if (!state.cropperInitialized) {
+      setupCropperEvents();
+    }
+  };
+}
+
+// 设置裁剪框事件
+function setupCropperEvents() {
+  let isDragging = false;
+  let isResizing = false;
+  let resizeDirection = '';
+  
+  // 添加调整大小的角落元素
+  if (!document.getElementById('cropperResizeHandleBR')) {
+    const corners = [
+      { id: 'cropperResizeHandleBR', position: 'bottom-right' },
+      { id: 'cropperResizeHandleBL', position: 'bottom-left' },
+      { id: 'cropperResizeHandleTR', position: 'top-right' },
+      { id: 'cropperResizeHandleTL', position: 'top-left' }
+    ];
+    
+    corners.forEach(corner => {
+      const resizeHandle = document.createElement('div');
+      resizeHandle.id = corner.id;
+      resizeHandle.className = `cropper-resize-handle ${corner.position}`;
+      resizeHandle.setAttribute('data-position', corner.position);
+      elements.cropperBox.appendChild(resizeHandle);
+    });
+  }
+  
+  // 鼠标/触摸开始
+  const handleStart = (e) => {
+    if (!state.cropperActive) return;
+    
+    // 阻止默认行为以防止选择图片等
+    e.preventDefault();
+    
+    const target = e.target;
+    
+    // 检查是否在调整大小的手柄上开始操作
+    if (target.classList.contains('cropper-resize-handle')) {
+      isResizing = true;
+      resizeDirection = target.getAttribute('data-position');
+    } else {
+      isDragging = true;
+    }
+    
+    // 记录开始位置
+    state.cropperData.initialX = e.clientX || e.touches[0].clientX;
+    state.cropperData.initialY = e.clientY || e.touches[0].clientY;
+  };
+  
+  // 鼠标/触摸移动
+  const handleMove = (e) => {
+    if (!isDragging && !isResizing) return;
+    
+    e.preventDefault();
+    
+    const currentX = e.clientX || e.touches[0].clientX;
+    const currentY = e.clientY || e.touches[0].clientY;
+    
+    // 计算移动距离
+    const deltaX = currentX - state.cropperData.initialX;
+    const deltaY = currentY - state.cropperData.initialY;
+    
+    // 更新初始位置
+    state.cropperData.initialX = currentX;
+    state.cropperData.initialY = currentY;
+    
+    if (isResizing) {
+      // 获取图片尺寸
+      const imgRect = elements.previewImage.getBoundingClientRect();
+      
+      // 当前裁剪框位置和尺寸
+      let { x, y, width, height } = state.cropperData;
+      let newWidth = width;
+      let newHeight = height;
+      let newX = x;
+      let newY = y;
+      
+      // 根据拖动的角落调整大小
+      if (resizeDirection === 'bottom-right') {
+        newWidth = width + deltaX;
+        newHeight = width + deltaX; // 保持正方形
+      } else if (resizeDirection === 'bottom-left') {
+        newWidth = width - deltaX;
+        newHeight = width - deltaX; // 保持正方形
+        newX = x + deltaX;
+      } else if (resizeDirection === 'top-right') {
+        newWidth = width + deltaX;
+        newHeight = width + deltaX; // 保持正方形
+        newY = y - deltaX;
+      } else if (resizeDirection === 'top-left') {
+        newWidth = width - deltaX;
+        newHeight = width - deltaX; // 保持正方形
+        newX = x + deltaX;
+        newY = y + deltaX;
+      }
+      
+      // 限制最小尺寸和确保在图片范围内
+      const minSize = 50;
+      
+      // 确保不小于最小尺寸
+      if (newWidth < minSize) {
+        const difference = minSize - newWidth;
+        newWidth = minSize;
+        newHeight = minSize;
+        
+        // 根据拖动的角落调整位置
+        if (resizeDirection === 'bottom-left' || resizeDirection === 'top-left') {
+          newX = x - difference;
+        }
+        if (resizeDirection === 'top-left' || resizeDirection === 'top-right') {
+          newY = y - difference;
+        }
+      }
+      
+      // 确保不超出图片边界
+      if (newX < 0) {
+        const difference = -newX;
+        newX = 0;
+        newWidth = Math.max(minSize, width - difference);
+        newHeight = newWidth;
+      }
+      if (newY < 0) {
+        const difference = -newY;
+        newY = 0;
+        newHeight = Math.max(minSize, height - difference);
+        newWidth = newHeight;
+      }
+      if (newX + newWidth > imgRect.width) {
+        newWidth = imgRect.width - newX;
+        newHeight = newWidth;
+      }
+      if (newY + newHeight > imgRect.height) {
+        newHeight = imgRect.height - newY;
+        newWidth = newHeight;
+      }
+      
+      // 更新裁剪框尺寸和位置
+      elements.cropperBox.style.width = `${newWidth}px`;
+      elements.cropperBox.style.height = `${newHeight}px`;
+      elements.cropperBox.style.left = `${newX}px`;
+      elements.cropperBox.style.top = `${newY}px`;
+      
+      // 更新状态
+      state.cropperData.width = newWidth;
+      state.cropperData.height = newHeight;
+      state.cropperData.x = newX;
+      state.cropperData.y = newY;
+      
+    } else if (isDragging) {
+      // 移动逻辑
+      let newX = state.cropperData.x + deltaX;
+      let newY = state.cropperData.y + deltaY;
+      
+      // 获取图片尺寸
+      const imgRect = elements.previewImage.getBoundingClientRect();
+      
+      // 限制裁剪框不超出图片范围
+      if (newX < 0) newX = 0;
+      if (newY < 0) newY = 0;
+      if (newX + state.cropperData.width > imgRect.width) {
+        newX = imgRect.width - state.cropperData.width;
+      }
+      if (newY + state.cropperData.height > imgRect.height) {
+        newY = imgRect.height - state.cropperData.height;
+      }
+      
+      // 更新裁剪框位置
+      elements.cropperBox.style.left = `${newX}px`;
+      elements.cropperBox.style.top = `${newY}px`;
+      
+      // 更新状态
+      state.cropperData.x = newX;
+      state.cropperData.y = newY;
+    }
+  };
+  
+  // 鼠标/触摸结束
+  const handleEnd = () => {
+    isDragging = false;
+    isResizing = false;
+    resizeDirection = '';
+  };
+  
+  // 添加触摸事件
+  elements.cropperBox.addEventListener('touchstart', handleStart, { passive: false });
+  document.addEventListener('touchmove', handleMove, { passive: false });
+  document.addEventListener('touchend', handleEnd);
+  
+  // 添加鼠标事件
+  elements.cropperBox.addEventListener('mousedown', handleStart);
+  document.addEventListener('mousemove', handleMove);
+  document.addEventListener('mouseup', handleEnd);
+  
+  // 确认裁剪
+  elements.confirmCrop.addEventListener('click', applyCrop);
+  
+  // 重置裁剪
+  elements.resetCrop.addEventListener('click', () => {
+    if (!state.cropperActive) return;
+    
+    // 重新初始化裁剪框
+    initCropper(state.selectedImage);
+  });
+}
+
+// 应用裁剪
+function applyCrop() {
+  if (!state.cropperActive || !state.selectedImage) return;
+  
+  const img = new Image();
+  img.src = state.selectedImage;
+  
+  img.onload = () => {
+    // 创建Canvas绘制裁剪图像
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 获取原始图像比例
+    const imgWidth = elements.previewImage.naturalWidth;
+    const imgHeight = elements.previewImage.naturalHeight;
+    const displayWidth = elements.previewImage.clientWidth;
+    const displayHeight = elements.previewImage.clientHeight;
+    
+    // 计算缩放比例
+    const scaleX = imgWidth / displayWidth;
+    const scaleY = imgHeight / displayHeight;
+    
+    // 计算原始图像上的裁剪区域
+    const cropX = state.cropperData.x * scaleX;
+    const cropY = state.cropperData.y * scaleY;
+    const cropWidth = state.cropperData.width * scaleX;
+    const cropHeight = state.cropperData.height * scaleY;
+    
+    // 设置Canvas大小为裁剪大小
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
+    
+    // 绘制裁剪区域
+    ctx.drawImage(
+      img,
+      cropX, cropY, cropWidth, cropHeight,
+      0, 0, cropWidth, cropHeight
+    );
+    
+    // 转换为数据URL
+    const croppedImageUrl = canvas.toDataURL('image/jpeg', 1.0);
+    
+    // 更新预览图片
+    showImagePreview(croppedImageUrl);
+    
+    // 更新选中的图片
+    state.selectedImage = croppedImageUrl;
+    
+    // 隐藏裁剪控件
+    elements.cropperContainer.classList.add('hidden');
+    elements.cropperControls.classList.add('hidden');
+    state.cropperActive = false;
+  };
+}
+
+// 显示预览图片
+function showImagePreview(imgSrc) {
+  elements.previewPlaceholder.classList.add('hidden');
+  elements.previewImageContainer.classList.remove('hidden');
+  elements.previewImage.classList.remove('hidden');
+  elements.previewImage.src = imgSrc;
+}
+
 // 处理图片上传
 function handleImageUpload(e) {
   if (e.target.files && e.target.files[0]) {
@@ -528,13 +882,11 @@ function handleImageUpload(e) {
         item.classList.remove('selected');
       });
       
-      // 显示预览
-      elements.previewPlaceholder.classList.add('hidden');
-      elements.previewImage.classList.remove('hidden');
-      elements.previewImage.src = event.target.result;
-      
-      // 更新状态
+      // 保存图片URL
       state.selectedImage = event.target.result;
+      
+      // 初始化裁剪工具
+      initCropper(state.selectedImage);
     };
     
     reader.readAsDataURL(e.target.files[0]);
@@ -704,6 +1056,9 @@ window.addEventListener('load', function() {
       elements.divideBtn.parentNode.appendChild(touchInfo);
     }
   }
+  
+  // 初始化裁剪工具事件
+  setupCropperEvents();
   
   // 禁用长按菜单的CSS
   const style = document.createElement('style');
