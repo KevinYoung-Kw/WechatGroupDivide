@@ -1396,4 +1396,87 @@ select {
   left: -7px;
   top: -7px;
   cursor: nwse-resize;
+}
+
+/* 色块抽屉样式 */
+.color-block-drawer {
+  margin-top: 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.color-block-drawer .drawer-content {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height var(--transition-normal);
+  background-color: #f9f9f9;
+}
+
+.color-block-drawer .drawer-content.open {
+  max-height: 500px;
+}
+
+.color-picker-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: var(--spacing-md);
+}
+
+.color-preview {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: #FFFFFF;
+  border: 1px solid #e0e0e0;
+  margin-right: 10px;
+}
+
+#colorPicker {
+  height: 40px;
+  padding: 5px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+.generate-color-btn {
+  padding: 8px 16px;
+  background-color: #7B9E89;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.generate-color-btn:hover {
+  background-color: #6a8c78;
+}
+
+.color-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 0 var(--spacing-md) var(--spacing-md);
+}
+
+.color-preset {
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.color-preset:hover {
+  transform: scale(1.05);
+}
+
+.color-preset.selected {
+  box-shadow: 0 0 0 3px #7B9E89;
 } 

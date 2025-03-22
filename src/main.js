@@ -8,6 +8,11 @@ const elements = {
   defaultImages: document.getElementById('defaultImages'),
   drawerToggle: document.getElementById('drawerToggle'),
   drawerContent: document.getElementById('drawerContent'),
+  colorDrawerToggle: document.getElementById('colorDrawerToggle'),
+  colorDrawerContent: document.getElementById('colorDrawerContent'),
+  colorPicker: document.getElementById('colorPicker'),
+  colorPreview: document.getElementById('colorPreview'),
+  generateColorBlock: document.getElementById('generateColorBlock'),
   previewPlaceholder: document.getElementById('previewPlaceholder'),
   previewImageContainer: document.getElementById('previewImageContainer'),
   previewImage: document.getElementById('previewImage'),
@@ -984,23 +989,117 @@ function closeModal() {
   }, 300);
 }
 
-// 注册事件监听器
-elements.divideBtn.addEventListener('click', createSlices);
-elements.imageUpload.addEventListener('change', handleImageUpload);
-elements.downloadAll.addEventListener('click', downloadAllSlices);
-elements.resetBtn.addEventListener('click', resetTool);
-elements.drawerToggle.addEventListener('click', toggleDrawer);
+// 切换色块抽屉
+function toggleColorDrawer() {
+  const drawerContent = elements.colorDrawerContent;
+  const drawerIcon = elements.colorDrawerToggle.querySelector('.drawer-icon');
+  
+  if (drawerContent.classList.contains('open')) {
+    drawerContent.classList.remove('open');
+    drawerIcon.classList.remove('open');
+  } else {
+    drawerContent.classList.add('open');
+    drawerIcon.classList.add('open');
+  }
+}
 
-// 捐赠和社群按钮事件
-elements.donateBtn.addEventListener('click', () => {
-  showQRModal('请作者喝杯咖啡', './images/donate-qr.png');
-});
+// 更新颜色预览
+function updateColorPreview() {
+  const color = elements.colorPicker.value;
+  elements.colorPreview.style.backgroundColor = color;
+}
 
-elements.communityBtn.addEventListener('click', () => {
-  showQRModal('扫码加入社群', './images/community-qr.png');
-});
+// 生成纯色块
+function generateColorBlock() {
+  const color = elements.colorPicker.value;
+  
+  // 创建一个临时Canvas
+  const canvas = document.createElement('canvas');
+  const size = canvasSize;
+  canvas.width = size;
+  canvas.height = size;
+  
+  // 填充颜色
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, size, size);
+  
+  // 转换为DataURL
+  const dataUrl = canvas.toDataURL('image/png');
+  
+  // 初始化裁剪工具
+  initCropper(dataUrl);
+  
+  // 关闭抽屉
+  elements.colorDrawerContent.classList.remove('open');
+  elements.colorDrawerToggle.querySelector('.drawer-icon').classList.remove('open');
+  
+  // 显示消息
+  showMessage(`已生成 ${color} 色块`, 'success');
+}
 
-elements.closeModalBtn.addEventListener('click', closeModal);
+// 初始化函数
+function init() {
+  // 验证DOM元素是否存在
+  const checkElements = () => {
+    for (const [key, element] of Object.entries(elements)) {
+      if (!element) {
+        console.error(`DOM元素 ${key} 不存在，请检查ID是否正确`);
+      }
+    }
+  };
+  
+  // 检查元素
+  checkElements();
+  
+  // 加载默认图片
+  loadDefaultImages();
+  
+  // 添加事件监听器
+  elements.imageUpload.addEventListener('change', handleImageUpload);
+  elements.divideBtn.addEventListener('click', createSlices);
+  elements.downloadAll.addEventListener('click', downloadAllSlices);
+  elements.resetBtn.addEventListener('click', resetTool);
+  elements.confirmCrop.addEventListener('click', applyCrop);
+  elements.resetCrop.addEventListener('click', resetCropper);
+  elements.drawerToggle.addEventListener('click', toggleDrawer);
+  elements.colorDrawerToggle.addEventListener('click', toggleColorDrawer);
+  elements.colorPicker.addEventListener('input', updateColorPreview);
+  elements.generateColorBlock.addEventListener('click', generateColorBlock);
+  elements.closeModalBtn.addEventListener('click', closeModal);
+  
+  // 捐赠和社群按钮事件
+  elements.donateBtn.addEventListener('click', () => {
+    showQRModal('请作者喝杯咖啡', './images/donate-qr.png');
+  });
+  
+  elements.communityBtn.addEventListener('click', () => {
+    showQRModal('扫码加入社群', './images/community-qr.png');
+  });
+  
+  // 添加色块预设点击事件
+  document.querySelectorAll('.color-preset').forEach(preset => {
+    preset.addEventListener('click', () => {
+      const color = preset.getAttribute('data-color');
+      elements.colorPicker.value = color;
+      updateColorPreview();
+      
+      // 移除其他预设的选中状态
+      document.querySelectorAll('.color-preset').forEach(p => {
+        p.classList.remove('selected');
+      });
+      
+      // 添加当前预设的选中状态
+      preset.classList.add('selected');
+    });
+  });
+  
+  // 设置裁剪事件
+  setupCropperEvents();
+  
+  // 初始化颜色预览
+  updateColorPreview();
+}
 
 // 点击弹窗背景关闭弹窗
 elements.modal.addEventListener('click', (e) => {
@@ -1080,4 +1179,42 @@ window.addEventListener('resize', function() {
 });
 
 // 启动应用
-loadDefaultImages(); 
+document.addEventListener('DOMContentLoaded', init);
+
+// 重置裁剪工具
+function resetCropper() {
+  // 重置裁剪框位置和大小
+  const container = elements.cropperContainer;
+  const box = elements.cropperBox;
+  
+  // 获取容器尺寸
+  const containerRect = container.getBoundingClientRect();
+  const containerWidth = containerRect.width;
+  const containerHeight = containerRect.height;
+  
+  // 计算初始裁剪框大小（容器的70%）
+  const initialSize = Math.min(containerWidth, containerHeight) * 0.7;
+  
+  // 计算裁剪框的起始位置，居中显示
+  const initialX = (containerWidth - initialSize) / 2;
+  const initialY = (containerHeight - initialSize) / 2;
+  
+  // 设置裁剪框的位置和大小
+  box.style.left = `${initialX}px`;
+  box.style.top = `${initialY}px`;
+  box.style.width = `${initialSize}px`;
+  box.style.height = `${initialSize}px`;
+  
+  // 更新裁剪数据
+  state.cropperData = {
+    x: initialX,
+    y: initialY,
+    width: initialSize,
+    height: initialSize,
+    initialX: 0,
+    initialY: 0
+  };
+  
+  // 显示消息
+  showMessage('已重置裁剪区域', 'info');
+} 

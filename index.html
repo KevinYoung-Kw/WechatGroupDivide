@@ -59,6 +59,33 @@
               </div>
             </div>
           </div>
+          
+          <!-- 色块抽屉 -->
+          <div class="color-block-drawer">
+            <div class="drawer-header" id="colorDrawerToggle">
+              <span class="drawer-title">选择纯色块</span>
+              <svg class="drawer-icon" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+            <div class="drawer-content" id="colorDrawerContent">
+              <div class="color-picker-container">
+                <div class="color-preview" id="colorPreview"></div>
+                <input type="color" id="colorPicker" value="#FFFFFF">
+                <button id="generateColorBlock" class="generate-color-btn">生成色块</button>
+              </div>
+              <div class="color-presets">
+                <div class="color-preset" data-color="#FFFFFF" style="background-color: #FFFFFF; border: 1px solid #E0E0E0;"></div>
+                <div class="color-preset" data-color="#000000" style="background-color: #000000;"></div>
+                <div class="color-preset" data-color="#FF0000" style="background-color: #FF0000;"></div>
+                <div class="color-preset" data-color="#00FF00" style="background-color: #00FF00;"></div>
+                <div class="color-preset" data-color="#0000FF" style="background-color: #0000FF;"></div>
+                <div class="color-preset" data-color="#FFFF00" style="background-color: #FFFF00;"></div>
+                <div class="color-preset" data-color="#FF00FF" style="background-color: #FF00FF;"></div>
+                <div class="color-preset" data-color="#00FFFF" style="background-color: #00FFFF;"></div>
+              </div>
+            </div>
+          </div>
         </div>
         
         <!-- 预览区域 -->
