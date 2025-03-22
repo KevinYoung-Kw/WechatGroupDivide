@@ -1479,4 +1479,16 @@ select {
 
 .color-preset.selected {
   box-shadow: 0 0 0 3px #7B9E89;
+}
+
+.usage-counter {
+  font-size: 14px;
+  margin: 5px 0;
+  color: var(--text-color-light, #666);
+  text-align: center;
+}
+
+.usage-counter span {
+  font-weight: 500;
+  color: var(--primary-color, #7B9E89);
 } 

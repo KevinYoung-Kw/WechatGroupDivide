@@ -1038,6 +1038,79 @@ function generateColorBlock() {
   showMessage(`已生成 ${color} 色块`, 'success');
 }
 
+// 更新当前日期（东八区）
+function updateCurrentDate() {
+  const now = new Date();
+  
+  // 调整为东八区时间
+  const options = { 
+    year: 'numeric', 
+    month: '2-digit', 
+    day: '2-digit',
+    timeZone: 'Asia/Shanghai'
+  };
+  
+  const dateStr = now.toLocaleDateString('zh-CN', options);
+  document.getElementById('currentDate').textContent = dateStr;
+}
+
+// 更新使用人次计数
+function updateUsageCount() {
+  // 获取计数服务器地址 - 生产环境地址
+  const countApiUrl = 'http://wxdiv.kevinyoung0210.me/api/count';
+  // 本地开发环境可以使用 'http://localhost:3456/api/count' 
+  
+  // 首先从API获取当前计数
+  fetch(countApiUrl)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('获取计数失败');
+      }
+      return response.json();
+    })
+    .then(data => {
+      // 更新显示的计数
+      document.getElementById('usageCount').textContent = data.count;
+      
+      // 检查本地存储中是否已经记录了此用户的访问
+      const hasVisited = localStorage.getItem('wechatDivideHasVisited');
+      
+      // 如果是新用户（未访问过），增加计数
+      if (!hasVisited) {
+        // 请求增加计数API
+        fetch(`${countApiUrl}/increment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+          .then(response => {
+            if (!response.ok) {
+              throw new Error('增加计数失败');
+            }
+            return response.json();
+          })
+          .then(data => {
+            // 更新显示的计数
+            document.getElementById('usageCount').textContent = data.count;
+            
+            // 将访问标记存储到本地
+            localStorage.setItem('wechatDivideHasVisited', 'true');
+          })
+          .catch(error => {
+            console.error('增加计数错误:', error);
+          });
+      }
+    })
+    .catch(error => {
+      console.error('获取计数错误:', error);
+      
+      // 出错时回退到使用本地存储的静态数字
+      const fallbackCount = document.getElementById('usageCount').textContent || '27';
+      document.getElementById('usageCount').textContent = fallbackCount;
+    });
+}
+
 // 初始化函数
 function init() {
   // 验证DOM元素是否存在
@@ -1051,6 +1124,12 @@ function init() {
   
   // 检查元素
   checkElements();
+  
+  // 更新当前日期
+  updateCurrentDate();
+  
+  // 更新使用人次
+  updateUsageCount();
   
   // 加载默认图片
   loadDefaultImages();
