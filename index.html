@@ -64,14 +64,23 @@
           <div class="color-block-drawer">
             <div class="drawer-header" id="colorDrawerToggle">
               <span class="drawer-title">选择纯色块</span>
+              <span class="drawer-subtitle">方便朋友圈纯色背景使用</span>
               <svg class="drawer-icon" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
             <div class="drawer-content" id="colorDrawerContent">
+              <p class="color-drawer-hint">为了方便您在发朋友圈时使用纯色背景，无需到处寻找纯色图片</p>
               <div class="color-picker-container">
                 <div class="color-preview" id="colorPreview"></div>
-                <input type="color" id="colorPicker" value="#FFFFFF">
+                <div class="color-picker-wrapper">
+                  <input type="color" id="colorPicker" value="#FFFFFF">
+                  <svg class="color-picker-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 8v8"></path>
+                    <path d="M8 12h8"></path>
+                  </svg>
+                </div>
                 <button id="generateColorBlock" class="generate-color-btn">生成色块</button>
               </div>
               <div class="color-presets">
@@ -105,6 +114,8 @@
             <label class="cropper-hint">拖动选择正方形区域</label>
             <button id="confirmCrop" class="confirm-crop-btn">确认选择</button>
             <button id="resetCrop" class="reset-crop-btn">重置选择</button>
+            <button id="cropperRatioToggle" class="cropper-ratio-btn hidden">切换为3:2 矩形</button>
+            <p id="ratio-description" class="ratio-description hidden">当前: 严格正方形(可能拉伸)</p>
           </div>
         </div>
         
