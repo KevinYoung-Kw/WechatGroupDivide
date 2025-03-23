@@ -4,6 +4,7 @@ import { elements, state } from './dom.js';
 import { isMobile, canvasSize, imageQuality, showMessage } from './utils.js';
 import { calculateLayout } from './layoutCalculator.js';
 import { initCropper } from './cropper.js';
+import { showImagePreview } from './ui.js';
 
 // 处理图片上传
 export function handleImageUpload(e) {
@@ -455,6 +456,11 @@ export function resetTool() {
 // 生成纯色块
 export function generateColorBlock() {
   const color = elements.colorPicker.value;
+  const members = parseInt(elements.members.value);
+  
+  // 清空之前的结果
+  elements.resultImages.innerHTML = '';
+  state.croppedImages = [];
   
   // 创建一个临时Canvas
   const canvas = document.createElement('canvas');
@@ -470,8 +476,18 @@ export function generateColorBlock() {
   // 转换为DataURL
   const dataUrl = canvas.toDataURL('image/png');
   
-  // 初始化裁剪工具
-  initCropper(dataUrl);
+  // 直接显示预览
+  showImagePreview(dataUrl);
+  state.selectedImage = dataUrl;
+  state.cropperActive = false;
+  
+  // 隐藏裁剪控件
+  if (elements.cropperContainer) {
+    elements.cropperContainer.classList.add('hidden');
+  }
+  if (elements.cropperControls) {
+    elements.cropperControls.classList.add('hidden');
+  }
   
   // 关闭抽屉
   elements.colorDrawerContent.classList.remove('open');
@@ -479,4 +495,203 @@ export function generateColorBlock() {
   
   // 显示消息
   showMessage(`已生成 ${color} 色块`, 'success');
+  
+  // 直接生成切片
+  // 获取布局
+  const layout = calculateLayout(members);
+  
+  // 创建切片结果容器
+  let resultGrid;
+  let bottomSection, middleSection, topSection;
+  
+  // 根据人数选择不同的布局
+  switch (members) {
+    case 2:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-2-persons';
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    case 3:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-3-persons';
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    case 4:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-4-persons';
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    case 5:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-5-persons';
+      
+      // 创建底部容器
+      bottomSection = document.createElement('div');
+      bottomSection.className = 'bottom';
+      
+      resultGrid.appendChild(bottomSection);
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    case 6:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-6-persons';
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    case 7:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-7-persons';
+      
+      // 创建顶部、中间和底部容器
+      topSection = document.createElement('div');
+      topSection.className = 'top';
+      
+      middleSection = document.createElement('div');
+      middleSection.className = 'middle';
+      
+      bottomSection = document.createElement('div');
+      bottomSection.className = 'bottom';
+      
+      resultGrid.appendChild(topSection);
+      resultGrid.appendChild(middleSection);
+      resultGrid.appendChild(bottomSection);
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    case 8:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-8-persons';
+      
+      // 创建顶部、中间和底部容器
+      topSection = document.createElement('div');
+      topSection.className = 'top';
+      
+      middleSection = document.createElement('div');
+      middleSection.className = 'middle';
+      
+      bottomSection = document.createElement('div');
+      bottomSection.className = 'bottom';
+      
+      resultGrid.appendChild(topSection);
+      resultGrid.appendChild(middleSection);
+      resultGrid.appendChild(bottomSection);
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    case 9:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-9-persons';
+      elements.resultImages.appendChild(resultGrid);
+      break;
+      
+    default:
+      resultGrid = document.createElement('div');
+      resultGrid.className = 'layout-4-persons';
+      elements.resultImages.appendChild(resultGrid);
+  }
+  
+  // 根据布局生成切片
+  for (let i = 0; i < layout.length; i++) {
+    const part = layout[i];
+    
+    // 色块全部使用相同的dataUrl
+    state.croppedImages.push(dataUrl);
+    
+    // 创建结果元素
+    const resultElement = document.createElement('div');
+    resultElement.className = 'result-image';
+    
+    const resultImg = document.createElement('img');
+    resultImg.src = dataUrl;
+    resultImg.alt = `切片 ${i + 1}`;
+    
+    // 启用图片的长按保存功能
+    resultImg.setAttribute('data-downloadable', 'true');
+    resultImg.setAttribute('data-long-press-save', 'true');
+    resultImg.style.objectFit = 'cover';
+    
+    resultElement.appendChild(resultImg);
+    
+    // 根据不同人数布局添加到不同的容器中
+    switch (members) {
+      case 3:
+        if (i === 0) {
+          resultElement.className += ' top';
+          resultGrid.appendChild(resultElement);
+        } else if (i === 1) {
+          resultElement.className += ' left';
+          resultGrid.appendChild(resultElement);
+        } else {
+          resultElement.className += ' right';
+          resultGrid.appendChild(resultElement);
+        }
+        break;
+        
+      case 5:
+        if (i === 0) {
+          resultElement.className += ' topleft';
+          resultGrid.appendChild(resultElement);
+        } else if (i === 1) {
+          resultElement.className += ' topright';
+          resultGrid.appendChild(resultElement);
+        } else {
+          // 将下方三个添加到底部行
+          bottomSection.appendChild(resultElement);
+        }
+        break;
+        
+      case 7:
+        if (i === 0) {
+          topSection.appendChild(resultElement);
+        } else if (i >= 1 && i <= 3) {
+          // 中间行
+          middleSection.appendChild(resultElement);
+        } else {
+          // 底部行
+          bottomSection.appendChild(resultElement);
+        }
+        break;
+        
+      case 8:
+        if (i < 2) {
+          // 顶部行
+          topSection.appendChild(resultElement);
+        } else if (i >= 2 && i <= 4) {
+          // 中间行
+          middleSection.appendChild(resultElement);
+        } else {
+          // 底部行
+          bottomSection.appendChild(resultElement);
+        }
+        break;
+        
+      default:
+        resultGrid.appendChild(resultElement);
+    }
+    
+    // 添加点击下载功能
+    resultElement.addEventListener('click', () => {
+      // 在移动设备上，点击应该不做任何操作，让用户可以长按保存
+      if (isMobile) {
+        showMessage('长按图片可直接保存到相册', 'info', 2000);
+        return;
+      }
+      
+      // 在桌面设备上才触发下载
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `微信群聊头像_${members}人_${i + 1}.jpg`;
+      a.click();
+    });
+  }
+  
+  // 显示结果区域
+  elements.resultContainer.classList.remove('hidden');
+  
+  // 滚动到结果区域
+  elements.resultContainer.scrollIntoView({ behavior: 'smooth' });
 } 
