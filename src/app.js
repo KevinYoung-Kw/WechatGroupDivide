@@ -7,6 +7,7 @@ import { updateCurrentDate, updateUsageCount, isMobile, showMessage } from './ut
 import { loadDefaultImages, showImagePreview, toggleDrawer, toggleColorDrawer, updateColorPreview, setupColorPresets, showQRModal, closeModal } from './ui.js';
 import { initCropper, applyCrop, resetCropper, setupCropperEvents, toggleCropperRatio } from './cropper.js';
 import { handleImageUpload, createSlices, downloadAllSlices, resetTool, generateColorBlock } from './imageProcessor.js';
+import { incrementUsageCount, getDefaultImages, ENV, logError } from './api.js';
 
 // 动态加载JSZip (只在桌面端需要)
 if (!isMobile) {
@@ -25,11 +26,11 @@ function init() {
   // 更新当前日期
   updateCurrentDate();
   
-  // 更新使用人次
-  updateUsageCount();
+  // 记录并更新使用人次
+  updateUsageAndSetupEnvironment();
   
   // 加载默认图片
-  loadDefaultImages(initCropper);
+  loadDefaultImagesFromApi();
   
   // 设置色块预设
   setupColorPresets();
@@ -152,6 +153,137 @@ function init() {
   const cropperHint = document.querySelector('.cropper-hint');
   if (cropperHint) {
     cropperHint.textContent = '拖动裁剪框或调整边角手柄';
+  }
+
+  // 添加环境显示标记（仅在开发环境）
+  if (!ENV.isProd && window.location.hostname !== 'preview.wxgroupdiv.com' && 
+      !window.location.hostname.includes('preview')) {
+    const envLabel = document.createElement('div');
+    envLabel.className = 'env-label';
+    envLabel.textContent = '测试环境';
+    envLabel.style.position = 'fixed';
+    envLabel.style.bottom = '10px';
+    envLabel.style.right = '10px';
+    envLabel.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
+    envLabel.style.color = 'white';
+    envLabel.style.padding = '5px 10px';
+    envLabel.style.borderRadius = '4px';
+    envLabel.style.fontSize = '12px';
+    envLabel.style.zIndex = '9999';
+    document.body.appendChild(envLabel);
+  }
+  
+  // 添加全局错误捕获
+  setupErrorHandling();
+}
+
+// 设置全局错误处理
+function setupErrorHandling() {
+  // 捕获未处理的Promise错误
+  window.addEventListener('unhandledrejection', event => {
+    console.error('未处理的Promise错误:', event.reason);
+    
+    // 在生产环境上报错误
+    if (ENV.isProd) {
+      logError({
+        type: 'unhandledrejection',
+        message: event.reason ? event.reason.message : 'Promise错误',
+        stack: event.reason ? event.reason.stack : '',
+        url: window.location.href,
+        time: new Date().toISOString()
+      });
+    }
+  });
+  
+  // 捕获全局JavaScript错误
+  window.addEventListener('error', event => {
+    console.error('JavaScript错误:', event.error);
+    
+    // 在生产环境上报错误
+    if (ENV.isProd) {
+      logError({
+        type: 'error',
+        message: event.message,
+        source: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        stack: event.error ? event.error.stack : '',
+        url: window.location.href,
+        time: new Date().toISOString()
+      });
+    }
+    
+    return false;
+  }, true);
+}
+
+// 更新使用统计并设置环境
+async function updateUsageAndSetupEnvironment() {
+  // 显示环境信息
+  console.log(`当前环境: ${ENV.isProd ? '生产环境' : '开发环境'}`);
+  console.log(`API地址: ${ENV.baseUrl}`);
+  
+  // 更新初始使用次数
+  const usageCountElement = elements.usageCount;
+  if (usageCountElement) {
+    try {
+      // 尝试获取本地存储的计数
+      const storedCount = localStorage.getItem('usageCount');
+      
+      // 如果本地存储中有计数，使用它
+      if (storedCount) {
+        usageCountElement.textContent = storedCount;
+        // 增加本地计数并保存
+        const newCount = parseInt(storedCount) + 1;
+        localStorage.setItem('usageCount', newCount.toString());
+        console.log('使用本地存储的计数:', newCount);
+        return;
+      }
+      
+      // 如果没有本地存储的计数，尝试从API获取
+      const count = await incrementUsageCount();
+      if (count > 0) {
+        usageCountElement.textContent = count;
+        localStorage.setItem('usageCount', count.toString());
+      } else {
+        // API返回无效计数，使用默认值
+        const defaultCount = parseInt(usageCountElement.textContent || '27');
+        localStorage.setItem('usageCount', defaultCount.toString());
+      }
+    } catch (error) {
+      // 出错时使用本地存储的数据或默认值
+      console.error('获取使用统计失败:', error);
+      const storedCount = localStorage.getItem('usageCount');
+      const defaultCount = parseInt(usageCountElement.textContent || '27');
+      
+      if (!storedCount) {
+        localStorage.setItem('usageCount', defaultCount.toString());
+      }
+      
+      usageCountElement.textContent = storedCount || defaultCount;
+    }
+  }
+}
+
+// 从API加载默认图片
+async function loadDefaultImagesFromApi() {
+  try {
+    // 尝试从API获取默认图片列表
+    const images = await getDefaultImages();
+    
+    if (Array.isArray(images) && images.length > 0) {
+      console.log('✅ 成功从API获取默认图片列表');
+      // 使用API返回的图片数据
+      loadDefaultImages(initCropper, images);
+    } else {
+      console.log('🔄 使用本地默认图片');
+      // 使用本地默认图片列表
+      loadDefaultImages(initCropper);
+    }
+  } catch (error) {
+    // API请求失败，使用本地默认图片
+    console.log('🔄 使用本地默认图片');
+    loadDefaultImages(initCropper);
   }
 }
 

@@ -75,45 +75,56 @@ export function closeModal() {
 }
 
 // 加载默认图片
-export function loadDefaultImages(initCropperCallback) {
-  const defaultImagesContainer = elements.defaultImages;
-  defaultImagesContainer.innerHTML = '';
+export function loadDefaultImages(onImageClick, apiImages = null) {
+  const defaultImagesContainer = document.getElementById('defaultImages');
+  if (!defaultImagesContainer) return;
   
-  // 默认图片列表
-  const defaultImages = [
-    './images/default1.jpg',
-    './images/default2.jpg',
-    './images/default3.jpg',
-    './images/default4.jpg',
-    './images/default5.jpg',
-    './images/default6.jpg'
+  // 使用API返回的图片列表或默认图片列表
+  const defaultImages = apiImages || [
+    { url: './images/default1.jpg', title: '沙滩日落' },
+    { url: './images/default2.jpg', title: '蓝天白云' },
+    { url: './images/default3.jpg', title: '山川河流' },
+    { url: './images/default4.jpg', title: '粉色花朵' },
+    { url: './images/default5.jpg', title: '绿色植物' },
+    { url: './images/default6.jpg', title: '海洋风景' }
   ];
   
-  // 创建默认图片元素
-  defaultImages.forEach((imgSrc, index) => {
-    const imgContainer = document.createElement('div');
-    imgContainer.className = 'default-image-item';
+  // 清空容器
+  defaultImagesContainer.innerHTML = '';
+  
+  // 添加默认图片
+  defaultImages.forEach((image, index) => {
+    const imageItem = document.createElement('div');
+    imageItem.className = 'default-image-item';
+    imageItem.setAttribute('data-index', index);
     
-    const img = document.createElement('img');
-    img.src = imgSrc;
-    img.alt = `默认图片 ${index + 1}`;
-    img.loading = 'lazy'; // 懒加载优化
+    const imgElement = document.createElement('img');
+    imgElement.src = image.url;
+    imgElement.alt = image.title || `默认图片 ${index + 1}`;
+    imgElement.loading = 'lazy';
     
-    imgContainer.appendChild(img);
-    defaultImagesContainer.appendChild(imgContainer);
+    const titleElement = document.createElement('span');
+    titleElement.className = 'default-image-title';
+    titleElement.textContent = image.title || `图片 ${index + 1}`;
+    
+    imageItem.appendChild(imgElement);
+    imageItem.appendChild(titleElement);
+    defaultImagesContainer.appendChild(imageItem);
     
     // 添加点击事件
-    imgContainer.addEventListener('click', () => {
+    imageItem.addEventListener('click', () => {
       // 移除其他图片的选中状态
-      document.querySelectorAll('.default-image-item').forEach(container => {
-        container.classList.remove('selected');
+      document.querySelectorAll('.default-image-item').forEach(item => {
+        item.classList.remove('selected');
       });
       
       // 添加选中状态
-      imgContainer.classList.add('selected');
+      imageItem.classList.add('selected');
       
-      // 初始化裁剪工具
-      initCropperCallback(imgSrc);
+      // 如果提供了回调函数，调用它
+      if (typeof onImageClick === 'function') {
+        onImageClick(image.url);
+      }
     });
   });
 }

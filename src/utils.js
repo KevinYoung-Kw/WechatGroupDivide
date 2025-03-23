@@ -5,6 +5,22 @@ export const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Oper
 export const canvasSize = isMobile ? 300 : 500;
 export const imageQuality = isMobile ? 0.9 : 1.0;
 
+// 环境配置
+export const ENV = {
+  // 判断当前是否为生产环境
+  isProd: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1',
+  
+  // API基础路径
+  get baseUrl() {
+    return this.isProd ? 'https://wxdiv.kevinyoung0210.me/api' : 'http://localhost:3456';
+  },
+  
+  // 获取完整API路径
+  getApiUrl(endpoint) {
+    return `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
+  }
+};
+
 // 显示消息提示
 export function showMessage(message, type = 'info', duration = 3000) {
   // 创建消息元素
@@ -86,59 +102,29 @@ export function updateCurrentDate() {
   document.getElementById('currentDate').textContent = dateStr;
 }
 
-// 更新使用人次计数
-export function updateUsageCount() {
-  // 获取计数服务器地址 - 生产环境地址
-  const countApiUrl = 'http://wxdiv.kevinyoung0210.me/api/count';
-  // 本地开发环境可以使用 'http://localhost:3456/api/count' 
+// 更新使用人次
+export async function updateUsageCount() {
+  const usageCountElement = document.getElementById('usageCount');
+  if (!usageCountElement) return;
   
-  // 首先从API获取当前计数
-  fetch(countApiUrl)
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('获取计数失败');
-      }
-      return response.json();
-    })
-    .then(data => {
-      // 更新显示的计数
-      document.getElementById('usageCount').textContent = data.count;
-      
-      // 检查本地存储中是否已经记录了此用户的访问
-      const hasVisited = localStorage.getItem('wechatDivideHasVisited');
-      
-      // 如果是新用户（未访问过），增加计数
-      if (!hasVisited) {
-        // 请求增加计数API
-        fetch(`${countApiUrl}/increment`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-          .then(response => {
-            if (!response.ok) {
-              throw new Error('增加计数失败');
-            }
-            return response.json();
-          })
-          .then(data => {
-            // 更新显示的计数
-            document.getElementById('usageCount').textContent = data.count;
-            
-            // 将访问标记存储到本地
-            localStorage.setItem('wechatDivideHasVisited', 'true');
-          })
-          .catch(error => {
-            console.error('增加计数错误:', error);
-          });
-      }
-    })
-    .catch(error => {
-      console.error('获取计数错误:', error);
-      
-      // 出错时回退到使用本地存储的静态数字
-      const fallbackCount = document.getElementById('usageCount').textContent || '27';
-      document.getElementById('usageCount').textContent = fallbackCount;
-    });
+  try {
+    // 默认值，会在api.js导入后被替换为真实API调用
+    let count = 0;
+    
+    // 尝试从本地存储获取初始值
+    const storedCount = localStorage.getItem('usageCount');
+    if (storedCount) {
+      count = parseInt(storedCount, 10);
+    } else {
+      // 初始化本地存储
+      localStorage.setItem('usageCount', count.toString());
+    }
+    
+    // 显示使用次数
+    usageCountElement.textContent = count;
+    
+    // API集成后，这里的逻辑会被替换
+  } catch (error) {
+    console.error('更新使用人次出错:', error);
+  }
 } 
